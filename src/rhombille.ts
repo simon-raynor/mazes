@@ -25,7 +25,7 @@ function getType([cx]: Vec2): Type {
     }
 }
 
-export function getDirections([cx, cy]: Vec2): Vec2[] {
+function getDirections([cx, cy]: Vec2): Vec2[] {
     const type = getType([cx, cy]);
     switch(type) {
         case 'top':
@@ -67,7 +67,7 @@ export function getDirections([cx, cy]: Vec2): Vec2[] {
     }
 }
 
-export function getCornerDirections([cx, cy]: Vec2, [dx, dy]: Vec2) {
+function getCornerDirections([cx, cy]: Vec2, [dx, dy]: Vec2) {
     const sourceType = getType([cx, cy]);
 
     const cornerDirs: Vec2[] = [];
@@ -174,7 +174,7 @@ export function getCornerDirections([cx, cy]: Vec2, [dx, dy]: Vec2) {
 }
 
 
-function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][]) {
+function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][], simple: boolean) {
     const directions = getDirections([cx, cy]);
     
     return directions.map(([dx, dy]) => {
@@ -185,22 +185,19 @@ function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][]) {
             [x, y]
         ];
         
-        const neighbours = getDirections([x, y]);
+        if (!simple) {
+            const neighbours = getDirections([x, y]);
+            const cornerDirs = getCornerDirections([cx, cy], [dx, dy]);
 
-        toCheck.push(
-            ...neighbours
-            .map(([dx, dy]) => [x + dx, y + dy] as Vec2)
-            .filter(([x, y]) => x !== cx || y !== cy)
-        )
-
-
-        const cornerDirs = getCornerDirections([cx, cy], [dx, dy]);
-
-        toCheck.push(
-            ...cornerDirs
-            .map(([dx, dy]) => [x + dx, y + dy] as Vec2)
-            .filter(([x, y]) => x !== cx || y !== cy)
-        )
+            toCheck.push(
+                ...[
+                    ...neighbours,
+                    ...cornerDirs
+                ]
+                .map(([dx, dy]) => [x + dx, y + dy] as Vec2)
+                .filter(([x, y]) => x !== cx || y !== cy)
+            );
+        }
 
         
         const isValid = toCheck.every(([vx, vy]) => {
@@ -224,6 +221,25 @@ function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][]) {
 
 const SIN60 = Math.sin(Math.PI / 3);
 
+
+function getCentre([x, y]: Vec2, size: number): Vec2 {
+    const type = getType([x, y]);
+
+    // work out the hexagonal grid center
+    const hexX = ((Math.floor(x / 3) + (y % 2 ? .5: 0)) * size * 2 * SIN60) + (SIN60 * size);
+    const hexY = (y * size * 1.5) + (size * .75);
+
+    switch(type) {
+        case 'top':
+            return [hexX, hexY - (size / 2)];
+        case 'left':
+            return [hexX - (SIN60 * size / 2), hexY + (size / 4)];
+        case 'right':
+            return [hexX + (SIN60 * size / 2), hexY + (size / 4)];
+    }
+}
+
+
 function drawAt(
     ctx: CanvasRenderingContext2D,
     [x, y]: Vec2,
@@ -231,18 +247,16 @@ function drawAt(
 ) {
     const type = getType([x, y]);
 
-    // work out the hexagonal grid center
-    const hexX = ((Math.floor(x / 3) + (y % 2 ? .5: 0)) * size * 2 * SIN60) + (SIN60 * size);
-    const hexY = (y * size * 1.5) + (size * .75);
+    const centre = getCentre([x, y], size);
 
     ctx.beginPath();
     
     if (type === 'top') {
-        draw_top(ctx, [hexX, hexY - (size / 2)], size);
+        draw_top(ctx, centre, size);
     } else if (type === 'left') {
-        draw_left(ctx, [hexX - (SIN60 * size / 2), hexY + (size / 4)], size);
+        draw_left(ctx, centre, size);
     } else if (type === 'right') {
-        draw_right(ctx, [hexX + (SIN60 * size / 2), hexY + (size / 4)], size);
+        draw_right(ctx, centre, size);
     }
     
     ctx.closePath();
@@ -276,6 +290,7 @@ function draw_right(ctx: CanvasRenderingContext2D, [cx, cy]: Vec2, size: number)
 
 export default {
     getValidNeighbours,
+    getCentre,
     drawAt,
     scale: [3 / (2 * SIN60), 1 / 1.5]
 }

@@ -1,4 +1,4 @@
-function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][]) {
+function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][], simple: boolean) {
     const directions = [
         [-1, 0],
         [0, -1],
@@ -14,30 +14,32 @@ function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][]) {
             [x, y]
         ];
 
-        if (dx) {
-            const x1 = x + dx;
-            const y1 = y + 1;
-            const y2 = y - 1;
+        if (!simple) {
+            if (dx) {
+                const x1 = x + dx;
+                const y1 = y + 1;
+                const y2 = y - 1;
 
-            toCheck.push(
-                [x, y1],
-                [x, y2],
-                [x1, y],
-                [x1, y1],
-                [x1, y2]
-            );
-        } else if (dy) {
-            const y1 = y + dy;
-            const x1 = x + 1;
-            const x2 = x - 1;
+                toCheck.push(
+                    [x, y1],
+                    [x, y2],
+                    [x1, y],
+                    [x1, y1],
+                    [x1, y2]
+                );
+            } else if (dy) {
+                const y1 = y + dy;
+                const x1 = x + 1;
+                const x2 = x - 1;
 
-            toCheck.push(
-                [x1, y],
-                [x2, y],
-                [x, y1],
-                [x1, y1],
-                [x2, y1]
-            );
+                toCheck.push(
+                    [x1, y],
+                    [x2, y],
+                    [x, y1],
+                    [x1, y1],
+                    [x2, y1]
+                );
+            }
         }
         
         const isValid = toCheck.every(([x, y]) => {
@@ -49,17 +51,24 @@ function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][]) {
     }).filter(a => !!a);
 }
 
+function getCentre([x, y]: Vec2, size: number) {
+    return [x * size + size/2, y * size + size/2];
+}
+
 function drawAt(
     ctx: CanvasRenderingContext2D,
     [x, y]: Vec2,
     size: number
 ) {
-    ctx.strokeRect(x * size, y * size, size, size);
-    ctx.fillRect(x * size, y * size, size, size);
+    const [cx, cy] = getCentre([x, y], size);
+
+    ctx.strokeRect(cx - size/2, cy - size/2, size, size);
+    ctx.fillRect(cx - size/2, cy - size/2, size, size);
 }
 
 export default {
     getValidNeighbours,
+    getCentre,
     drawAt,
     scale: [1, 1]
 }

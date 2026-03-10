@@ -1,4 +1,4 @@
-function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][]) {
+function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][], simple: boolean) {
     const yDir = ([cx, cy]: Vec2): Vec2 => (cx + cy) % 2 ? [0, 1] : [0, -1];
 
     const directions = [
@@ -15,32 +15,33 @@ function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][]) {
             [x, y]
         ];
 
-        if (dx) {
-            const x1 = x + dx;
-            const x2 = x1 + dx;
-            const y1 = y + yDir([x, y])[1];
+        if (!simple) {
+            if (dx) {
+                const x1 = x + dx;
+                const x2 = x1 + dx;
+                const y1 = y + yDir([x, y])[1];
 
-            toCheck.push(
-                [x, y1],
-                [x1, y],
-                [x1, y1],
-                [x2, y],
-                [x2, y1]
-            );
-        } else if (dy) {
-            const y1 = y + dy;
-            const x1 = x + 1;
-            const x2 = x - 1;
+                toCheck.push(
+                    [x, y1],
+                    [x1, y],
+                    [x1, y1],
+                    [x2, y],
+                    [x2, y1]
+                );
+            } else if (dy) {
+                const y1 = y + dy;
+                const x1 = x + 1;
+                const x2 = x - 1;
 
-            toCheck.push(
-                [x1, y],
-                [x2, y],
-                [x, y1],
-                [x1, y1],
-                [x2, y1]
-            );
+                toCheck.push(
+                    [x1, y],
+                    [x2, y],
+                    [x, y1],
+                    [x1, y1],
+                    [x2, y1]
+                );
+            }
         }
-
         
         const isValid = toCheck.every(([x, y]) => {
             const col = grid[x];
@@ -53,6 +54,16 @@ function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][]) {
 
 const SIN60 = Math.sin(Math.PI / 3);
 
+function getCentre([x, y]: Vec2, size: number) {
+    const sx = size / 2;
+    const sy = size * SIN60;
+
+    return [
+        (sx * x) + size / 4, // add size/4 to centre it better
+        (sy * y) + size / 4  // add size/4 to centre it better
+    ];
+}
+
 function drawAt(
     ctx: CanvasRenderingContext2D,
     [x, y]: Vec2,
@@ -61,8 +72,7 @@ function drawAt(
     const sx = size / 2;
     const sy = size * SIN60;
 
-    const cx = (sx * x) + size / 4; // add size/4 to centre it better
-    const cy = (sy * y) + size / 4; // add size/4 to centre it better
+    const [cx, cy] = getCentre([x, y], size);
 
     ctx.beginPath();
     if ((x + y) % 2) {
@@ -82,6 +92,7 @@ function drawAt(
 
 export default {
     getValidNeighbours,
+    getCentre,
     drawAt,
     scale: [2, 1 / SIN60]
 }

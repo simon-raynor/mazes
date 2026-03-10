@@ -35,7 +35,7 @@ const types = [
 
 
 
-const SIZE = 8;
+const SIZE = 24;
 
 
 
@@ -47,10 +47,11 @@ const mazes = types.map(type => {
     const backtrack: Vec2[] = [];
 
     const drawOrder: Vec2[] = [];
+    const portals: [Vec2, Vec2][] = [];
 
     let cursor: Vec2 = [Math.floor(W / 2), Math.floor(H / 2)];
 
-    function step(fn: (c: Vec2, g: boolean[][]) => Vec2[]) {
+    function step(fn: (c: Vec2, g: boolean[][], s: boolean) => Vec2[]) {
         const [cx, cy] = cursor;
         
         if (grid[cx][cy]) {
@@ -58,12 +59,13 @@ const mazes = types.map(type => {
         }
         grid[cx][cy] = false;
 
-        const neighbours = fn(cursor, grid);
+        const neighbours = fn(cursor, grid, false);
 
         if (neighbours.length) {
             const next = pickRandom(neighbours);
 
             backtrack.push(cursor);
+            portals.push([cursor, next]);
             cursor = next;
         } else if (backtrack.length) {
             const back = pickRandom(backtrack);
@@ -76,7 +78,7 @@ const mazes = types.map(type => {
 
     while(step(type.getValidNeighbours));
 
-    return { type, grid, drawOrder, dimensions: [W, H] };
+    return { type, grid, drawOrder, portals, dimensions: [W, H] };
 });
 
 function pickRandom<T>(array: T[]): T {
@@ -89,11 +91,11 @@ function pickRandom<T>(array: T[]): T {
 
 
 
-const perframe = 2;
+const perframe = 1;
 
 const frame = () => {
     let running = false;
-    mazes.forEach(({ type, grid, drawOrder, dimensions: [W, H] }, mazeNo) => {
+    mazes.forEach(({ type, grid, drawOrder, portals, dimensions: [W, H] }, mazeNo) => {
         const canvasOffsetX = (canvas.width / 2) * (mazeNo % 2);
         const canvasOffsetY = (canvas.height / 2) * Math.floor(mazeNo / 2);
 
@@ -103,12 +105,24 @@ const frame = () => {
             canvasOffsetY + ((canvas.height / 2) - (H * SIZE / type.scale[1])) / 2
         );
 
-        ctx.fillStyle = ctx.strokeStyle = `hsl(${mazeNo * 90} 75 50)`;
 
         for (let i = 0; i < perframe; i++) {
+            ctx.fillStyle = 'transparent';
+            ctx.strokeStyle = `hsl(${mazeNo * 90} 75 50)`;
             const coord = drawOrder.shift();
             if (coord) {
                 type.drawAt(ctx, coord!, SIZE);
+            }
+
+            ctx.fillStyle = ctx.strokeStyle = `white`;
+            const port = portals.shift();
+            if (port) {
+                const [x1, y1] = type.getCentre(port[0], SIZE);
+                const [x2, y2] = type.getCentre(port[1], SIZE);
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
             }
         }
 

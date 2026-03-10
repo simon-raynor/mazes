@@ -1,4 +1,4 @@
-function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][]) {
+function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][], simple: boolean) {
     const directions = (y: number) => {
         const offset = y % 2 ? 1 : -1;
         return [
@@ -16,11 +16,16 @@ function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][]) {
         const y = cy + dy;
 
         const toCheck = [
-            [x, y],
-            ...directions(y)
+            [x, y]
+        ];
+
+        if (!simple) {
+            toCheck.push(
+                ...directions(y)
                 .map(([dx, dy]) => [x + dx, y + dy])
                 .filter(([x, y]) => x !== cx || y !== cy)
-        ];
+            );
+        }
         
         const isValid = toCheck.every(([x, y]) => {
             const col = grid[x];
@@ -33,13 +38,19 @@ function getValidNeighbours([cx, cy]: Vec2, grid: boolean[][]) {
 
 const SIN60 = Math.sin(Math.PI / 3);
 
+function getCentre([x, y]: Vec2, size: number) {
+    return [
+        ((x + (y % 2 ? .5: 0)) * size * 2 * SIN60) + (SIN60 * size),
+        (y * size * 1.5) + (size * .75)
+    ];
+}
+
 function drawAt(
     ctx: CanvasRenderingContext2D,
     [x, y]: Vec2,
     size: number
 ) {
-    const cx = ((x + (y % 2 ? .5: 0)) * size * 2 * SIN60) + (SIN60 * size);
-    const cy = (y * size * 1.5) + (size * .75);
+    const [cx, cy] = getCentre([x, y], size);
 
     ctx.beginPath();
     ctx.moveTo(cx, cy - size);
@@ -56,6 +67,7 @@ function drawAt(
 
 export default {
     getValidNeighbours,
+    getCentre,
     drawAt,
     scale: [1 / (2 * SIN60), 1 / 1.5]
 }

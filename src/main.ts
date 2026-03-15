@@ -35,50 +35,71 @@ const types = [
 
 
 
-const SIZE = 24;
+const SIZE = 4;
+const REAL_WALLS = true;
 
 
 
 const mazes = types.map(type => {
     const H = Math.floor((canvas.height / 2) * type.scale[1] / SIZE)
         , W = Math.floor((canvas.width / 2) * type.scale[0] / SIZE);
+    /* const H = Math.floor((canvas.height) * type.scale[1] / SIZE)
+        , W = Math.floor((canvas.width) * type.scale[0] / SIZE); */
 
-    const grid = Array(W).fill(true).map(() => Array(H).fill(true));
-    const backtrack: Vec2[] = [];
+    const grid: boolean[][] = Array(W).fill(true).map(() => Array(H).fill(true));
+    const backtrack: [Vec2, number][] = [];
 
     const drawOrder: Vec2[] = [];
     const portals: [Vec2, Vec2][] = [];
 
-    let cursor: Vec2 = [Math.floor(W / 2), Math.floor(H / 2)];
+    let distance: number = 1;
+    const distances: number[][] = Array(W).fill(0).map(() => Array(H).fill(0));
+
+    //let cursor: Vec2 = [Math.floor(W / 2), Math.floor(H / 2)];
+    let cursor: Vec2 = [2, 0];
 
     function step(fn: (c: Vec2, g: boolean[][], s: boolean) => Vec2[]) {
         const [cx, cy] = cursor;
         
         if (grid[cx][cy]) {
             drawOrder.push(cursor);
+            distances[cx][cy] = distance;
+            distance++;
         }
         grid[cx][cy] = false;
 
-        const neighbours = fn(cursor, grid, false);
+        const neighbours = fn(cursor, grid, !REAL_WALLS);
 
         if (neighbours.length) {
             const next = pickRandom(neighbours);
 
-            backtrack.push(cursor);
+            backtrack.push([cursor, distance]);
             portals.push([cursor, next]);
             cursor = next;
         } else if (backtrack.length) {
             const back = pickRandom(backtrack);
 
             backtrack.splice(backtrack.indexOf(back), 1);
-            cursor = back;
+            [cursor, distance] = back;
         } else return false;
-        return true;
+        return true;// drawOrder.length < (W * H * .25);
     }
 
     while(step(type.getValidNeighbours));
 
-    return { type, grid, drawOrder, portals, dimensions: [W, H] };
+    return {
+        type,
+        grid,
+        drawOrder,
+        portals,
+        dimensions: [W, H],
+        distance: {
+            grid: distances,
+            max: distances.reduce((max, dists) => {
+                return Math.max(max, dists.reduce((max2, dist) => Math.max(max2, dist), 0));
+            }, 0)
+        }
+    };
 });
 
 function pickRandom<T>(array: T[]): T {
@@ -91,11 +112,11 @@ function pickRandom<T>(array: T[]): T {
 
 
 
-const perframe = 1;
+const perframe = 400;
 
 const frame = () => {
     let running = false;
-    mazes.forEach(({ type, grid, drawOrder, portals, dimensions: [W, H] }, mazeNo) => {
+    mazes.forEach(({ type, distance: { grid, max }, drawOrder, portals, dimensions: [W, H] }, mazeNo) => {
         const canvasOffsetX = (canvas.width / 2) * (mazeNo % 2);
         const canvasOffsetY = (canvas.height / 2) * Math.floor(mazeNo / 2);
 
@@ -107,14 +128,21 @@ const frame = () => {
 
 
         for (let i = 0; i < perframe; i++) {
-            ctx.fillStyle = 'transparent';
-            ctx.strokeStyle = `hsl(${mazeNo * 90} 75 50)`;
             const coord = drawOrder.shift();
             if (coord) {
-                type.drawAt(ctx, coord!, SIZE);
+                const [x, y] = coord;
+
+                //const color = `hsl(${270 + (180 * grid[x][y] / max)} 75 50)`
+                const color = `hsl(${mazeNo * 90} ${33 - (25 * grid[x][y] / max)} ${75 - (33 * grid[x][y] / max)})`
+
+                ctx.fillStyle = color;//'transparent';
+                ctx.strokeStyle = color;
+                type.drawAt(ctx, coord, SIZE);
             }
 
-            ctx.fillStyle = ctx.strokeStyle = `white`;
+            /* ctx.lineCap = 'round';
+            ctx.lineWidth = 3*SIZE/8;
+            ctx.fillStyle = ctx.strokeStyle = `rgba(255,255,255,0.5)`;
             const port = portals.shift();
             if (port) {
                 const [x1, y1] = type.getCentre(port[0], SIZE);
@@ -123,7 +151,7 @@ const frame = () => {
                 ctx.moveTo(x1, y1);
                 ctx.lineTo(x2, y2);
                 ctx.stroke();
-            }
+            } */
         }
 
         ctx.restore();

@@ -6,9 +6,6 @@ import hexagon from './hexagon';
 import rhombille from './rhombille';
 
 
-type Vec2 = [number, number]
-
-
 
 const canvas = document.getElementById('app');
 
@@ -116,7 +113,7 @@ const perframe = 400;
 
 const frame = () => {
     let running = false;
-    mazes.forEach(({ type, distance: { grid, max }, drawOrder, portals, dimensions: [W, H] }, mazeNo) => {
+    mazes.forEach(({ type, distance: { grid, max }, drawOrder, dimensions: [W, H] }, mazeNo) => {
         const canvasOffsetX = (canvas.width / 2) * (mazeNo % 2);
         const canvasOffsetY = (canvas.height / 2) * Math.floor(mazeNo / 2);
 
